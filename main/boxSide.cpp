@@ -14,7 +14,7 @@ class BoxSide::BoxSide {
     public:
 
     // Call process every frame
-    void _process() {
+    void process() {
         if (!isActive) {
             return;
         }
@@ -29,6 +29,10 @@ class BoxSide::BoxSide {
 
     // Method to define what happens when sensor is triggered
     void onSensorTriggered() {
+        if(isActive) {
+            return;
+        }
+        isActive = true;
         startTimer();
     }
 

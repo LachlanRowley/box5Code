@@ -20,5 +20,5 @@ void loop()
     digitalWrite((i+2), HIGH);
     delay(100);
   }
-}
+};
 

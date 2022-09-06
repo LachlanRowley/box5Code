@@ -29,13 +29,16 @@ void setup(){
   }
   
   //Interrupt triggers when sensor reads HIGH from LOW
-  attachInterrupt(digitalPinToInterrupt(LEFT_SENSOR_PIN), leftSide.onSensorTrigger, RISING);
-  attachInterrupt(digitalPinToInterrupt(RIGHT_SENSOR_PIN), rightSide.onSensorTrigger, RISING);
+  //attachInterrupt(digitalPinToInterrupt(LEFT_SENSOR_PIN), leftSide.onSensorTrigger, RISING);
+  //attachInterrupt(digitalPinToInterrupt(RIGHT_SENSOR_PIN), rightSide.onSensorTrigger, RISING);
 }
 
 void loop() {
-  leftSide._process();
-  rightSide._process();
+  if(analogueRead(PINLEFT) <= MIN_VALUE) {
+    leftSide.onSensorTrigger();
+  }
+  leftSide.process();
+  rightSide.process();
 }
   /*
   
