@@ -5,6 +5,7 @@ class Pattern {
 
 class BoxSide {
     public:
+        void process();
         void onSensorTrigger();
 };
 
