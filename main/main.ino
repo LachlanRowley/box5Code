@@ -7,52 +7,41 @@
 BoxSide leftSide;
 BoxSide rightSide;
 
+const int SENSITIVITY = 250;
+const int sensorPinLeft;
+const int sensorPinRight;
+
+int lightPinsUp[1] = {1};
+int lightPinsDown[1] = {2};
+
+int servoPinLeft = -1;
+int servoPinRight = -1;
+
+Servo leftServo;
+Servo rightServo;
+
 
 void setup(){
-
-  // Initialise LED and servo pins
-  int LightPins[2] = {1, 4};
-  int ServoPins[2] = {2, 3};
-
-  int LEFT_SENSOR_PIN;
-  int RIGHT_SENSOR_PIN;
-
-
+  Serial.begin(9600);
   // Set pins to output
-  for(int i = 0; i < sizeof(LightPins); i++){
-    pinMode(i, OUTPUT);
+  for(int i = 0; i < sizeof(LightPinsUp); i++){
+    //Symmetrical so pin count SHOULD be the same
+    pinMode(lightPinsUp[i], OUTPUT);
+    pinMode(lightPinsDown[i], OUTPUT);
   }
 
-  // Set pins to input
-  for(int i = 0; i < sizeof(ServoPins); i++){
-    pinMode(i, INPUT);
-  }
-  
-  //Interrupt triggers when sensor reads HIGH from LOW
-  //attachInterrupt(digitalPinToInterrupt(LEFT_SENSOR_PIN), leftSide.onSensorTrigger, RISING);
-  //attachInterrupt(digitalPinToInterrupt(RIGHT_SENSOR_PIN), rightSide.onSensorTrigger, RISING);
+  leftServo.attach(servoPinLeft);
+  rightServo.attach(servoPinRight);
+
+
+  pinMode(sensorPinLeft, INPUT);
+  pinMode(sensorPinRight, INPUT);
+
 }
 
 void loop() {
-  if(analogueRead(PINLEFT) <= MIN_VALUE) {
-    leftSide.onSensorTrigger();
-  }
+
   leftSide.process();
   rightSide.process();
 }
-  /*
-  
-  if (left LED is primary){
-    display primary LED pattern left;
-    display base LED pattern right;
-  }
-  else if (right LED is primary){
-    display primary LED pattern right;
-    display base LED pattern left;
-  }
-  else{
-    display base LED pattern
-  }
-
-  */
   
