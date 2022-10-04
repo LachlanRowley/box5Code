@@ -1,12 +1,18 @@
 #include <Servo.h>
-#include <Adafruit_NeoPixel.h>
-const int SENSITIVITY = 250;
+//#include <Adafruit_NeoPixel.h>
+const int SENSITIVITY = 950;
+
+//Servo
+const int DEFAULT_SERVO_POS = 0;
+const int SERVO_END_POS = 90;
+
+const int NEO_PIXEL_COUNT = 24;
 
 class Pattern {
-	int *lights;
-	int activeLight = 0;
-	long timeLastUpdate = 0;
-	int timeDelay = 1000;
+  int *lights;
+  int activeLight = 0;
+  long timeLastUpdate = 0;
+  int timeDelay = 1000;
   
     void patternStart() {
       digitalWrite(lights[0], HIGH);
@@ -34,9 +40,12 @@ class BoxSide {
     // Initialise Timers
     long servoTimerEndTime;
     long servoTimerLength = 1000;
+    long servoReturnTimerLength = 500;
     bool servoTimerStarted;
     
     int *lights; //Save space and use pointer to array
+    //Adafruit_NeoPixel light;
+    
     Servo servo;
     byte sensorPin;
 
@@ -46,11 +55,11 @@ class BoxSide {
         servo = sv;
         *lights = *l;
         sensorPin = sen;
+        //light = Adafr
        }
       // Call process every frame
       void process() {
         if (!isActive) {
-          Serial.println(analogRead(sensorPin));
           if(analogRead(sensorPin) < SENSITIVITY) {
             onSensorTriggered();
           }
@@ -58,7 +67,6 @@ class BoxSide {
         }
         else {
           if(millis() > servoTimerEndTime) {
-            isActive = false;
             timerTimeOut();
           }
         }
@@ -66,23 +74,32 @@ class BoxSide {
 
     // Method to define what happens when sensor is triggered
     void onSensorTriggered() {
-        if(isActive) {
-            return;
-        }
         isActive = true;
         startTimer();
     }
 
     // Method to define what happens when the timer starts
     void startTimer() {
-        servoTimerEndTime = millis() + servoTimerLength;
-        servoTimerStarted = true;
+        setTimer(servoTimerLength);
     }
     
     // Method to define what happens when the timer timeouts
     void timerTimeOut() {
-        servoTimerStarted = false;
-        servo.write(2);    
+        //WRITE SERVO TO PUSH BALL OUT
+        if(servo.read() == DEFAULT_SERVO_POS) {
+          servo.write(SERVO_END_POS);
+          //Start timer to return servo to default
+          setTimer(servoReturnTimerLength);
+        }
+        //WRITE SERVO TO DEFAULT POSITION; SERVO READY TO BE TRIGGERED
+        else {
+          servo.write(DEFAULT_SERVO_POS);
+          isActive = false;         
+        }
+    }
+
+    void setTimer(int timerLength) {
+      servoTimerEndTime = millis()+timerLength;
     }
 };
 
@@ -93,7 +110,7 @@ const byte sensorPinRight = A1;
 int lightPinsUp[1] = {1};
 int lightPinsDown[1] = {2};
 
-int servoPinLeft = 12;
+int servoPinLeft = 10;
 int servoPinRight = -1;
 
 Servo leftServo;
@@ -107,7 +124,7 @@ BoxSide rightSide(rightServo, p2, sensorPinRight);
 
 
 void setup(){
-  Serial.begin(9600);
+  Serial.begin(4800);
   // Set pins to output
   for(int i = 0; i < sizeof(lightPinsUp); i++){
     //Symmetrical so pin count SHOULD be the same
@@ -115,6 +132,9 @@ void setup(){
     pinMode(lightPinsDown[i], OUTPUT);
   }
 
+
+  leftServo.write(DEFAULT_SERVO_POS);
+  rightServo.write(DEFAULT_SERVO_POS);
   leftServo.attach(servoPinLeft);
   rightServo.attach(servoPinRight);
 
@@ -125,8 +145,7 @@ void setup(){
 }
 
 void loop() {
-
+  Serial.println(analogRead(sensorPinLeft));
   leftSide.process();
   rightSide.process();
 }
-
