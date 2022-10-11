@@ -1,0 +1,171 @@
+// Import Libraries
+#include <Servo.h>
+#include <Adafruit_NeoPixel.h>
+
+// Initialise Servo Variables
+const int DEFAULT_SERVO_POS = 0;
+const int SERVO_END_POS = 90;
+const int NEO_PIXEL_COUNT = 24;
+const int SENSITIVITY = 950;
+
+// Define Pattern Class
+class Pattern {
+  protected:
+    Adafruit_NeoPixel light;
+    int curOnLight = 0;
+    long timeDelay = 100;
+    long endTime;
+  public:
+  	Pattern() {}
+  	Pattern(Adafruit_NeoPixel l) {
+    	light = l;
+  	}
+  bool isActive = false;
+  void process() {
+    if(isActive) {
+      if(millis() > endTime) {
+        patternInc();
+        endTime = millis()+timeDelay;
+      }
+    }
+  }
+
+  void patternStart() {
+  	light.setPixelColor(curOnLight, (255,0,0));
+    light.show();
+    isActive = true;
+  }
+  
+  void patternInc() {
+    light.clear(); 
+    
+    if (curOnLight == 18){
+      curOnLight = 0;
+    }
+    curOnLight = curOnLight % NEO_PIXEL_COUNT;   
+    light.setPixelColor(curOnLight, light.Color(255,0,0));
+    light.setPixelColor(curOnLight + 1 % 24, light.Color(255,0,0));
+    light.setPixelColor(curOnLight + 6 % 24, light.Color(255,0,0));
+    light.setPixelColor(curOnLight + 7 % 24, light.Color(255,0,0));
+    light.show();
+    curOnLight += 2;
+  }
+    void patternEnd() {
+		light.clear();
+    }
+};
+
+// Define Box Side Class
+class BoxSide {
+  bool isActive = false;
+
+    // Initialise Timers
+  long servoTimerEndTime;
+  long servoTimerLength = 1000;
+  long servoReturnTimerLength = 500;
+  bool servoTimerStarted;
+    
+  int lightPin;
+  Adafruit_NeoPixel light;
+    
+  Servo servo;
+  byte sensorPin;
+
+  Pattern activePattern;
+  public:
+  BoxSide(Servo sv, int l, byte sen) {
+    servo = sv;
+    lightPin = l;
+    sensorPin = sen;
+    light = Adafruit_NeoPixel(NEO_PIXEL_COUNT, lightPin);
+    light.begin();
+    light.clear();
+    activePattern = Pattern(light);
+  }
+  
+  // Method to call process every frame
+  void process() {
+    activePattern.process();
+    if (!isActive) {
+      if(analogRead(sensorPin) < SENSITIVITY) {
+        onSensorTriggered();
+      }
+      return;
+    }
+    else {
+      if(millis() > servoTimerEndTime) {
+        timerTimeOut();
+        activePattern.patternStart();
+      }
+    }
+
+  }
+
+  // Method to define what happens when sensor is triggered
+  void onSensorTriggered() {
+    isActive = true;
+    startTimer();
+  }
+
+  // Method to define what happens when the timer starts
+  void startTimer() {
+    setTimer(servoTimerLength);
+  }
+
+  // Method to define what happens when the timer timeouts
+  void timerTimeOut() {
+    
+    //WRITE SERVO TO PUSH BALL OUT
+    if(servo.read() == DEFAULT_SERVO_POS) {
+      servo.write(SERVO_END_POS);
+      //Start timer to return servo to default
+      setTimer(servoReturnTimerLength);
+    }
+    //WRITE SERVO TO DEFAULT POSITION; SERVO READY TO BE TRIGGERED
+    else {
+      servo.write(DEFAULT_SERVO_POS);
+      isActive = false;         
+    }
+  }
+
+  // Method to set the timer length
+  void setTimer(int timerLength) {
+    servoTimerEndTime = millis()+timerLength;
+  }
+};
+
+const byte sensorPinLeft = A0;
+const byte sensorPinRight = -1;
+
+int lightPinsLeft = 2;
+int lightPinsRight = -1;
+
+int servoPinLeft = 10;
+int servoPinRight = -1;
+
+Servo leftServo;
+Servo rightServo;
+
+// Define left and right box-side variables
+BoxSide leftSide(leftServo, lightPinsLeft, sensorPinLeft);
+BoxSide rightSide(rightServo, lightPinsRight, sensorPinRight);
+
+// Define Setup Function
+void setup(){
+  pinMode(lightPinsLeft, OUTPUT);
+  pinMode(lightPinsRight, OUTPUT);
+
+  leftServo.write(DEFAULT_SERVO_POS);
+  rightServo.write(DEFAULT_SERVO_POS);
+  leftServo.attach(servoPinLeft);
+  rightServo.attach(servoPinRight);
+
+  pinMode(sensorPinLeft, INPUT);
+  pinMode(sensorPinRight, INPUT);
+}
+
+// Define Loop Function
+void loop() {
+  leftSide.process();
+  rightSide.process();
+}
