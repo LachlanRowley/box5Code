@@ -5,9 +5,62 @@
 // Initialise Servo Variables
 const int DEFAULT_SERVO_POS = 0;
 const int SERVO_END_POS = 90;
-const int NEO_PIXEL_COUNT = 20;
-const int SENSITIVITY = 950;
-const int PATTERNCOUNT = 3;
+const int NEO_PIXEL_COUNT = 24;
+const int SENSITIVITY = 1020;
+const int PATTERNCOUNT = 6;
+
+class bouncingPattern {
+	
+	protected:
+		Adafruit_NeoPixel light;
+		int curOnLight = 0;
+		long timeDelay = 50;
+		long endTime;
+		int width = 3;
+		short dir = 1;  
+	public:
+		bouncingPattern() {}
+		bouncingPattern(Adafruit_NeoPixel l) {
+			light = l;
+		}
+
+        bool isActive = false;
+        void process() {
+            if(isActive) {
+                if(millis() > endTime) {
+                    patternInc();
+                    endTime = millis()+timeDelay;
+                }
+            }
+        }
+		
+	
+	void patternStart() {
+        light.clear();
+		light.setPixelColor(curOnLight, light.Color(255, 255, 255));
+		light.show();
+		isActive = true;
+      	endTime = millis() + timeDelay;
+	}
+  
+	void patternInc() {
+		light.clear();
+		curOnLight += dir;
+		if(curOnLight + width  >= NEO_PIXEL_COUNT){
+			dir = -1;
+		}else if(curOnLight==0){
+			dir = 1;
+		}
+		for(int i =0; i < width; i++){
+			light.setPixelColor(curOnLight+i, light.Color(255,0,0));
+		}
+      	light.show();
+    }
+    void patternEnd() {
+		light.clear();
+      	curOnLight = 0;
+    }
+};
 
 // Define Sequential Pattern Class
 class SequentialPattern {
@@ -206,6 +259,56 @@ class LoadingPattern {
           curOnLight = 0;
       }
 };
+// Define Rainbow Pattern
+class RainbowPattern {
+	protected:
+		Adafruit_NeoPixel light;
+		int curOnLight = 0;
+		long timeDelay = 100;
+		long endTime;
+	public:
+		RainbowPattern() {}
+		RainbowPattern(Adafruit_NeoPixel l) {
+			light = l;
+		}
+		bool isActive = false;
+	void process() {
+		if(isActive) {
+			if(millis() > endTime) {
+				patternInc();
+				endTime = millis()+timeDelay;
+			}
+		}
+	}
+
+  
+  void patternStart() {
+	light.setPixelColor(curOnLight, (255,0,0));
+    light.show();
+    isActive = true;
+  }
+  
+  void patternInc() {
+    curOnLight = curOnLight % NEO_PIXEL_COUNT;   
+    
+    int r = random(0,255);
+    int g = random(0,255);
+    int b = random(0,255);
+    
+    light.setPixelColor(curOnLight, light.Color(r,g,b));
+    light.setPixelColor(curOnLight + 1 % 24, light.Color(r,g,b));
+    light.setPixelColor(curOnLight + 2 % 24, light.Color(r,g,b));
+    light.setPixelColor(curOnLight + 3 % 24, light.Color(r,g,b));
+    light.setPixelColor(curOnLight + 4 % 24, light.Color(r,g,b));
+    light.setPixelColor(curOnLight + 5 % 24, light.Color(r,g,b));
+    light.show();
+    curOnLight += 6;
+  }
+    void patternEnd() {
+		light.clear();
+    }
+};
+
 
 // Define Box Side Class
 class BoxSide {
@@ -228,6 +331,8 @@ class BoxSide {
   	ColumnsPattern coPat;
   	LoadingPattern ldPat;
   	RowPattern rwPat;
+  	RainbowPattern rbPat;
+    bouncingPattern bPat;
 
 	public:
 	  	Adafruit_NeoPixel light;
@@ -249,7 +354,7 @@ class BoxSide {
 		processPattern();
       	//If the sensor has not been triggered read sensor value
 		if (!isActive) {
-			if(digitalRead(sensorPin) == HIGH) {
+			if(analogRead(sensorPin) <= SENSITIVITY) {
 				onSensorTriggered();
 			}
 			return;
@@ -301,6 +406,8 @@ class BoxSide {
       	coPat = ColumnsPattern(light);
       	ldPat = LoadingPattern(light);
       	rwPat = RowPattern(light);
+        rbPat = RainbowPattern(light);
+        bPat = bouncingPattern(light);
 	}
 	
 	//Call setup function (if exists) for pattern
@@ -308,6 +415,7 @@ class BoxSide {
   	//-1 for random
   	//Other for set value
 	void patternStart(int genRnd) {
+      	light.clear();
     	int patId = genRnd;
 	    if(genRnd == -1) {
 			patId = random(PATTERNCOUNT);
@@ -324,6 +432,12 @@ class BoxSide {
           		break;
           	case 3:
           		ldPat.patternStart();
+          		break;
+            case 4:
+          		rbPat.patternStart();
+          		break;
+            case 5:
+          		bPat.patternStart();
           		break;
 
         }
@@ -344,16 +458,16 @@ class BoxSide {
             case 3:
   		        ldPat.process();
         		break;
-
+          	case 4:
+          		rbPat.process();
+          		break;
+          	case 5:
+          		bPat.process();
+          		break;
         }
 	}
 
   	void patternExit() {
-        this->activePatternNum = -3;
-      	light.fill(light.Color(255,0,255));
-      	light.show();
-        return;
-
 		switch(this->activePatternNum) {
 	        case 0:
 				sqPat.patternEnd();
@@ -367,10 +481,18 @@ class BoxSide {
           	case 3:
           		ldPat.patternEnd();
           		break;
+          	case 4:
+          		rbPat.patternEnd();
+          		break;
+          	case 5:
+          		bPat.patternEnd();
+          		break;
 
         }
-        Serial.println("Exitted");
-	}
+        this->activePatternNum = -3;
+      	light.fill(light.Color(255,0,255));
+      	light.show();
+    }
 };
 
 const byte sensorPinLeft = 2;
@@ -379,8 +501,8 @@ const byte sensorPinRight = 3;
 int lightPinsLeft = 7;
 int lightPinsRight = 6;
 
-int servoPinLeft = -1;
-int servoPinRight = -1;
+int servoPinLeft = 4;
+int servoPinRight = 5;
 
 Servo leftServo;
 Servo rightServo;
@@ -392,6 +514,7 @@ BoxSide rightSide(rightServo, lightPinsRight, sensorPinRight);
 // Define Setup Function
 void setup(){
   	randomSeed(analogRead(8));
+  	Serial.begin(4800);
 	//pinMode(lightPinsLeft, OUTPUT);
 	//pinMode(lightPinsRight, OUTPUT);
 
