@@ -5,11 +5,14 @@
 // Initialise Servo Variables
 const int DEFAULT_SERVO_POS = 100;
 const int SERVO_END_POS = 250;
-const int NEO_PIXEL_COUNT = 24;
-const int SENSITIVITY = 1018;
+const int NEO_PIXEL_COUNT = 28;
 const int PATTERNCOUNT = 6;
 
-Adafruit_NeoPixel leftLight = Adafruit_NeoPixel(29,8);
+const int lightPinLeft = 8;
+const int lightPinRight = 10;
+
+Adafruit_NeoPixel leftLight = Adafruit_NeoPixel(NEO_PIXEL_COUNT+1,lightPinLeft);
+Adafruit_NeoPixel rightLight = Adafruit_NeoPixel(NEO_PIXEL_COUNT, lightPinRight);
 
 class bouncingPattern {
   
@@ -324,6 +327,7 @@ class BoxSide {
   bool servoTimerStarted;
     
   int lightPin;
+  int SENSITIVITY = 1018;
 
   Servo servo;
   byte sensorPin;
@@ -341,12 +345,17 @@ class BoxSide {
       Adafruit_NeoPixel light;
     int activePatternNum = -3;
         BoxSide *neighbourSide;
-    BoxSide(Servo sv, int l, byte sen) {
+    BoxSide(Servo sv, bool isLeft, byte sen, int sens) {
             servo = sv;
-            lightPin = l;
             sensorPin = sen;
+            SENSITIVITY = sens;
             //light = Adafruit_NeoPixel(NEO_PIXEL_COUNT, lightPin);
-            light = leftLight;
+            if(isLeft) {
+              light = leftLight;              
+            }
+            else {
+              light = rightLight;
+            }
             light.clear();
             patternSetup();
         }
@@ -499,10 +508,9 @@ class BoxSide {
 };
 
 const byte sensorPinLeft = A0;
-const byte sensorPinRight = A1;
+const byte sensorPinRight = A3;
 
-int lightPinsLeft = 8;
-int lightPinsRight = 8;
+;
 
 int servoPinLeft = 5;
 int servoPinRight = 6;
@@ -511,17 +519,15 @@ Servo leftServo;
 Servo rightServo;
 
 // Define left and right box-side variables
-BoxSide leftSide(leftServo, lightPinsLeft, sensorPinLeft);
-BoxSide rightSide(rightServo, lightPinsRight, sensorPinRight);
+BoxSide leftSide(leftServo,true, sensorPinLeft, 1018);
+BoxSide rightSide(rightServo,false, sensorPinRight, 1018);
 
 int x = 0;
 // Define Setup Function
 void setup(){
-    leftLight.begin();
-    randomSeed(analogRead(8));
-    Serial.begin(4800);
-  pinMode(lightPinsLeft, OUTPUT);
-  pinMode(lightPinsRight, OUTPUT);
+  leftLight.begin();
+  randomSeed(analogRead(8));
+  Serial.begin(4800);
 
   leftServo.write(DEFAULT_SERVO_POS);
   rightServo.write(DEFAULT_SERVO_POS);
@@ -538,7 +544,6 @@ void setup(){
 // Define Loop Function
 void loop() {
   leftSide.process();
-  Serial.println(analogRead(A1));
-
+  Serial.println(analogRead(A0));
   rightSide.process();
 }
